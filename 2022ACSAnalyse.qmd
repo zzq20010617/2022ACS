@@ -1,0 +1,143 @@
+---
+title: "Estimating Respondents by State of 2022 ACS USA"
+author: 
+  - Ziqi Zhu
+  - Yuanchen Miao
+thanks: "Code and data are available at: https://github.com/zzq20010617/2022ACS"
+date: 3 October 2024
+date-format: long
+number-sections: true
+bibliography: references.bib
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    colorlinks: true
+---
+# Introduction
+
+The R programming language (@talia), dplyr(@dplyr), and (@tibble) were used to estimate data and generate tables, package (@knitr) and (@kablee) is used for adding caption to table. The data were gathered from @IPUMS.
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+library(dplyr)
+library(tibble)
+library(knitr)
+library(kableExtra)
+```
+
+# Obtain Data
+The data is obtained from the IPUMS USA[@IPUMS], the sample of 2022 only is selected from all of the samples, and "GEOGRAPHIC" and "EDUCATION" are selected in harmonized variables to get variables of "STATEICP" from "GEOGRAPHIC" and "EDUCD" from "EDUCATION". By using the code book, we are able to find out which state is the code of stateicp presents and what degree is the code of educd presents. The format of the data downloading from IPUMS USA has been changed to CSV files. This table @tbl-data shows the first several rows of the data we use.
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+data <- read.csv("data/usa_00003.csv")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-data
+
+# View the first few rows of the data
+reduced_data <- data %>% select("STATEICP", "EDUCD")
+head(reduced_data, 3) %>% 
+  kable(caption = "2022 ACS respondent state and educated level")  %>%
+  kable_styling(font_size = 10) 
+```
+Then we can filter by doctoral degree by EDUCD and get the number for each STATEICP as @tbl-doc shows, the number of California (STATEICP=71) shows in @tbl-cal
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-doc
+
+doctoral_data <- reduced_data %>%
+  filter(EDUCD == 116) 
+
+# Group by STATEICP and count the number of respondents
+doctoral_by_state <- doctoral_data %>%
+  group_by(STATEICP) %>%
+  summarise(doctoral_respondents = n()) %>%
+  as_tibble()
+
+# View the result
+head(doctoral_by_state, 5) %>% 
+  kable(caption = "doctoral respondents number of each state in USA 2022")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-cal
+
+# Get the row for California
+doctoral_by_state[46, ] %>%
+  knitr::kable(caption = "Doctoral Respondents number in California 2022") %>%
+  kableExtra::kable_styling(font_size = 10)
+```
+
+# Overview of ratio estimators approach
+
+The ratio estimator is found by first filtering the doctor degree out from all of the respondents by reducing all the other rows which do not have the code of "EDUCD" equal to 116 (where 116 is the doctor degree according to the codebook of IPUMS USA) then we use the method group_by STATEICP to gather the number of doctor degrees together with the same stateicp. Then, by checking the code book, we find the row with stateicp equal to 71, California, and divide the number of doctor degrees in California with the total number of respondents given by Rohan to obtain the ratio estimators
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+
+# Get ratio for California
+california_ratio <- 6336/391171
+
+estimated_total_respondents <- doctoral_by_state %>%
+  mutate(estimated_total = doctoral_respondents / california_ratio)
+
+state_counts <- reduced_data %>%
+  count(STATEICP) %>%
+  rename(actual_total_respondents = n)
+
+# View the updated table with the estimated total respondents
+print(estimated_total_respondents)
+
+combined_data <- merge(estimated_total_respondents, state_counts, by = "STATEICP", all = TRUE)
+```
+
+# Our estimates and the actual number of respondents.
+
+Our estimates and actual number for all states is shown in following table @tbl-all
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-all
+
+kable(combined_data, caption = "estimate and actual respondents of each state in USA 2022")
+```
+
+# Possible reasons of the difference
+
+The primary reason for discrepancies is the varying levels of educational attainment across states. States with more urban areas and a higher concentration of educational institutions often have a greater proportion of respondents with doctoral degrees compared to California. In such cases, applying California’s ratio will result in an overestimation of the total number of doctoral degree holders, like Massachusetts @tbl-mas. Conversely, states with fewer educational institutions or lower educational attainment levels will produce an underestimate.
+
+Another contributing factor is population composition. Differences in population size and demographics can affect the distribution of educational attainment. For example, states with a larger number of immigrants or international students may have more individuals pursuing doctoral degrees. Additionally, states with older populations are more likely to have a higher ratio of residents holding doctoral degrees, as advanced degrees are often obtained later in life.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| label: tbl-mas
+
+# Get the row of Massachusetts
+combined_data[3, ] %>%
+  knitr::kable(caption = "Doctoral respondents, and estimate/actual respondents in Massachusetts 2022") %>%
+  kableExtra::kable_styling(font_size = 10)
+```
+
+\newpage
+
+# References
