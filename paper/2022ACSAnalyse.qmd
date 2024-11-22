@@ -4,7 +4,7 @@ author:
   - Ziqi Zhu
   - Yuanchen Miao
 thanks: "Code and data are available at: https://github.com/zzq20010617/2022ACS"
-date: 3 October 2024
+date: 21 November 2024
 date-format: long
 number-sections: true
 bibliography: references.bib
@@ -16,7 +16,7 @@ format:
 ---
 # Introduction
 
-The R programming language (@talia), dplyr(@dplyr), and (@tibble) were used to estimate data and generate tables, package (@knitr) and (@kablee) is used for adding caption to table. The data were gathered from @IPUMS.
+The R programming language [@talia], dplyr [@dplyr], and tibble [@tibble] were used to estimate data and generate tables, package knitr (@knitr) and kabble [@kablee] is used for adding caption to table. The data were gathered from [@IPUMS].
 ```{r}
 #| include: false
 #| warning: false
@@ -33,7 +33,7 @@ The data is obtained from the IPUMS USA[@IPUMS], the sample of 2022 only is sele
 #| include: false
 #| warning: false
 #| message: false
-data <- read.csv("data/usa_00003.csv")
+data <- read.csv("../data/usa_00003.csv")
 ```
 
 ```{r}
@@ -66,7 +66,8 @@ doctoral_by_state <- doctoral_data %>%
   as_tibble()
 
 # View the result
-head(doctoral_by_state, 5) %>% 
+head(doctoral_by_state, 5) %>%
+  rename("Doctoral Respondents" = doctoral_respondents) %>%
   kable(caption = "doctoral respondents number of each state in USA 2022")
 ```
 
@@ -78,6 +79,7 @@ head(doctoral_by_state, 5) %>%
 
 # Get the row for California
 doctoral_by_state[46, ] %>%
+  rename("Doctoral Respondents" = doctoral_respondents) %>%
   knitr::kable(caption = "Doctoral Respondents number in California 2022") %>%
   kableExtra::kable_styling(font_size = 10)
 ```
@@ -117,7 +119,15 @@ Our estimates and actual number for all states is shown in following table @tbl-
 #| message: false
 #| label: tbl-all
 
-kable(combined_data, caption = "estimate and actual respondents of each state in USA 2022")
+combined_data%>%
+  rename(
+    "State (ICP Code)" = STATEICP,
+    "Doctoral Respondents" = doctoral_respondents,
+    "Estimated Total Respondents" = estimated_total,
+    "Actual Total Respondents" = actual_total_respondents
+  ) %>%
+  kable(caption = "Estimate and Actual Respondents of Each State in USA (2022)") %>%
+  kable_styling(font_size = 10)
 ```
 
 # Possible reasons of the difference
@@ -134,6 +144,12 @@ Another contributing factor is population composition. Differences in population
 
 # Get the row of Massachusetts
 combined_data[3, ] %>%
+    rename(
+    "State (ICP Code)" = STATEICP,
+    "Doctoral Respondents" = doctoral_respondents,
+    "Estimated Total Respondents" = estimated_total,
+    "Actual Total Respondents" = actual_total_respondents
+  ) %>%
   knitr::kable(caption = "Doctoral respondents, and estimate/actual respondents in Massachusetts 2022") %>%
   kableExtra::kable_styling(font_size = 10)
 ```
